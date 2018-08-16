@@ -56,11 +56,13 @@ class Swing(object):
         d = defaultdict(list)
         for k, lv in self.adjacency_list_topdown.items():
             for v in lv:
+                #print(k,lv,v)
                 d[v].append(k)
         return dict(d)
 
     @lazy_property
     def l_node(self) -> Set[Node]:
+        ''' list of nodes'''
         return self.adjacency_list_topdown.keys() | self.adjacency_list_bottomup.keys()
 
     @lazy_property
@@ -90,7 +92,7 @@ class Swing(object):
         return {n: g(in_,n) - g(out_,n) for n in self.l_node}
 
     @lru_cache(None)
-    def path_node(self, cur) -> List[List[Node]]:
+    def path_node(self, cur: Node) -> List[List[Node]]:
         '''Compute all the node form cur to the root of the DAG.
             Assume a unique root'''
         d = self.adjacency_list_bottomup
@@ -101,6 +103,10 @@ class Swing(object):
             it = iter([[]])
 
         return [k + [cur] for k in it]
+
+    @lazy_property
+    def path_edges(self) -> List[List[Edge]]:
+        return [ list(pairwise(p)) for p in self.path_node(self.leaf)]
 
     @lazy_property
     def path(self) -> Dict[Tuple[Edge], int]:
@@ -214,12 +220,12 @@ class Swing(object):
         '''
 
         dim = x.get_n()
-        weighs = [x.get_coord(i) for i in range(dim)]
+        buffers = [x.get_coord(i) for i in range(dim)]
 
-        delta = fixed_weighs - np.sum(edges_adjacency_matrix * weighs, axis=1)
+        delta = fixed_weighs - np.sum(edges_adjacency_matrix * buffers, axis=1)
 
         x.set_bb_output(0, max(delta))           # (1)
-        x.set_bb_output(1, sum(weighs) - max_b)  # (2)
+        x.set_bb_output(1, sum(buffers) - max_b)  # (2)
 
         for i, v in enumerate(delta, 2):
             x.set_bb_output(i, -v)               #(3) Minus sign: \ge 0 -> \le 0 
@@ -277,3 +283,13 @@ class Swing(object):
         # Map back to the name
         l_buffer_updated = {k: int(v) for k, v in zip(opt_edg_buf, x_return) if v}
         return l_buffer_updated, f_return
+
+    @lazy_property
+    def max_traffic(self) -> List[Edge]:
+        d = defaultdict(int)
+        for i in self.path_edges:
+            for o in i:
+                d[o] += 1
+
+        return dict(d)
+
