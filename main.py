@@ -1,16 +1,17 @@
 #!/usr/bin/env python
-from balence import Swing, Apple, Gao
+from BalencePoint.swing import Swing
+from BalencePoint.lp import Apple, Gao
 
-import networkx as nx
-import matplotlib.pyplot as plt
-from networkx.drawing.nx_agraph import write_dot
-
-import random
 import logging
 
 logging.getLogger().setLevel(logging.DEBUG)
 
-def generate_random_dag(n, p,seed=None):
+def generate_random_dag(n, p,seed=None, draw=False):
+
+    import random
+    import networkx as nx
+    from networkx.drawing.nx_agraph import write_dot
+
     random_graph = nx.fast_gnp_random_graph(n, p, directed=True, seed=seed)
     G = nx.DiGraph( [(u, v) for (u, v) in random_graph.edges() if u < v])
     # Merge all the leaf
@@ -24,11 +25,13 @@ def generate_random_dag(n, p,seed=None):
             d['weight'] = random.randint(1,20)
 
 
-    pos=nx.spring_layout(G)
-    labels = nx.get_edge_attributes(G,'weight')
-    nx.draw_networkx_edge_labels(G,pos,edge_labels=labels)
-    
-    write_dot(G,'66666.dot')
+    if draw:
+        from networkx.drawing.nx_agraph import write_dot
+
+        pos=nx.spring_layout(G)
+        labels = nx.get_edge_attributes(G,'weight')
+        nx.draw_networkx_edge_labels(G,pos,edge_labels=labels)
+        write_dot(G,'66666.dot')
     
     w = { tuple([u,v]): d['weight'] for u,v,d in G.edges(data=True)}
 
@@ -36,9 +39,7 @@ def generate_random_dag(n, p,seed=None):
 
 if __name__ == '__main__':
 
-    # Weighted graph to balence
     #Gao fig 8
-
     '''
     w = {
         ('u1', 'u2'): 1,
@@ -64,36 +65,26 @@ if __name__ == '__main__':
         ('u5', 'u7'): 1,
         ('u7', 'u8'): 1
     }
+    seed = 1
+    import time
 
-    #max_b, max_bb_eval, seed = 410-1, 14, 1
-    #w =generate_random_dag(30,0.1, seed)
+    start = time.time()
+    w =generate_random_dag(1250,0.001, seed)
+    end = time.time()
+    print (f"Gen graph: {end - start}")
+
+
 
     s = Swing(w) 
-    
-    glp = Apple(s)
-    print (glp.optimal_buffer)
 
+    start = time.time()
     glp = Gao(s)
-    print (glp.optimal_buffer)
-
-    #from collections import Counter
-    #w2 = Counter(w) + Counter(glp.opt_edge_buffer)
-   
-    #mm = MinMax(s,glp.opt_edge_buffer)
-    #print (mm.opt_edge_buffer(734,200))
-    #print(s.max_traffic)
-    # operation
-    #w[('u1','u2')] = 2
-
-    #s2 =Swing(w)
-    # optarion
-
-    #print(s.adjacency_list_topdown)
-    #print(f'Max buffer alowed: {max_b}')
-    #l_buffer_updated, diff_delay = Swing(w).constrained_edge_buffer(max_b, max_bb_eval)  #adjacency_buffered
-    #print(f'list buffer: {l_buffer_updated}')
-    #print(f'number of buffer used: {sum(l_buffer_updated.values())}')
-    #print(f'max diff delay: {diff_delay}')
-
-
-
+    glp.optimal_buffer
+    end = time.time()
+    print (f"Gao opt: {end - start}")
+ 
+    start = time.time()
+    glp = Apple(s)
+    glp.optimal_buffer
+    end = time.time()
+    print (f"Apple opt: {end - start}")
