@@ -39,7 +39,7 @@ def generate_random_dag(n, p,seed=None, draw=False):
 if __name__ == '__main__':
 
     #Gao fig 8
-    '''
+    #'''
     w = {
         ('u1', 'u2'): 1,
         ('u2', 'u4'): 3,
@@ -49,9 +49,9 @@ if __name__ == '__main__':
         ('u1', 'u5'): 20,
         ('u3', 'u5'): 5
     }
-    '''
-
     #'''
+
+    '''
     # 1489 edges
     # 903 nodes
     # 603 paths
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     w =generate_random_dag(1250,0.001, seed=1)
     end = time.time()
     print (f"Gen graph: {end - start}")
-    #'''
+    '''
 
 
     #mode = 'Gao' 
