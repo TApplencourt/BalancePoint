@@ -7,4 +7,7 @@ This algorithm generates an optimally balanced graph, that is, a graph that requ
 
 2. The Apple Linear program formulation. This algorithm generates an balanced graph as good as possible given a budget of buffer.
 
-
+# Requirement
+  - cvoxp (http://cvxopt.org/install/)
+  - numpy
+  - networkx (optional https://networkx.github.io/documentation/stable/install.html)
