@@ -23,22 +23,6 @@ def pairwise(iterable):
 
 
 class Swing(object):
-    '''
-    This object takes as input a weighted acyclic graph and maximizes the pipelining capabilities of the graph.
-
-    The key two menbers are:
-        1- opt_edge_buffer -> Optimal buffering need to balence the graph
-        2- constrained_edge_buffer(max_b) -> Optimal constrain balenced graph
-
-    For (1) we use Gao algorithm based on a Linear Programming formulation
-    (2) use a minmax formulation where we minimize the maximum difference between each path and the critical path subject to a limited number of buffers.
-    In order to reduce the number of parameters, we optimize only the edge created by (1).
-
-    Dependency:
-
-    (1):cvxopt and glpk (conda install cxopt)
-    (2): Nomad (https://www.gerad.ca/nomad/) and PyNomad (see Nomad user guide on how to install)
-    '''
 
     def __init__(self, weigh):
         self.weigh = weigh  # Top-> bottom by default.
@@ -123,23 +107,37 @@ class Swing(object):
         return d
 
     @lazy_property
+    def critical_paths(self):
+        c =  self.critical_weigh
+        d = {p: w for p, w in self.path.items() if w == c}
+        logging.info(f'{len(d)} critical path')
+        return d
+
+    @lazy_property
+    def is_balenced(self):
+        return len(self.critical_paths) == len(self.path)
+
+    @lazy_property
     def critical_weigh(self) -> int:
         cw = max(self.path.values())
         logging.info(f'Critical path weigh: {cw}')
         return cw
 
     @lazy_property
-    def non_critical_path(self) -> Dict[Tuple[Edge], int]:
+    def non_critical_paths(self) -> Dict[Tuple[Edge], int]:
         c = self.critical_weigh
         d = {p: w for p, w in self.path.items() if w != c}
-        logging.info(f'{len(d)} paths to optimize')
+        logging.info(f'{len(d)} paths non critical paths')
         return d
+
+class Gao():
+
     #                        _
     # |  o ._   _   _. ._   |_) ._ _   _  ._ _. ._ _
     # |_ | | | (/_ (_| |    |   | (_) (_| | (_| | | |
     #                                  _|
     #
-    # https://doi.org/10.1016/0743-7315(89)90041-5
+    # Gao' paper: https://doi.org/10.1016/0743-7315(89)90041-5
     #
     # Maximize \sum_i u_i (outdegree(i) - indegree(i))
     # Subject to
@@ -147,43 +145,48 @@ class Swing(object):
     #       u_n - u_1 = w_{st}
     #       u_i >= 0
 
+    def __init__(self,s):
+        self.swing = s
+
+            
     @lazy_property
-    def lp_constrain_matrix(self):
+    def constrain_matrix(self):
 
-        od = self.order
-        n_node, n_edge = map(len, (self.l_node, self.weigh))
+        s = self.swing
 
-        A = np.zeros((n_edge, n_node), float)
-        for idx, (i, o) in enumerate(self.weigh):
+        od = s.order
+        n_node, n_edge = map(len, (s.l_node, s.weigh))
+
+        A = np.zeros((n_edge, n_node), dtype=float)
+        for idx, (i, o) in enumerate(s.weigh):
             A[idx, od[i]] = 1
             A[idx, od[o]] = -1
 
-        A_pos = np.identity(n_node) * -1 # Expant with positif contrains
-        return np.concatenate((A, A_pos), axis=0)
+        A_pos = np.identity(n_node) # Expant with positif contrains
+        return np.concatenate((A, -A_pos), axis=0)
 
     @lazy_property
-    def lp_constrain_vector(self):
-        b = np.array([-k for k in self.weigh.values()], dtype=float)
-        b_pos = np.zeros(len(self.l_node))  # Positif contrains
+    def constrain_vector(self):
+        b = -np.array(list(self.swing.weigh.values()), dtype=float)
+        b_pos = np.zeros(len(self.swing.l_node))  # Positif contrains
         return np.concatenate((b, b_pos))
 
     @lazy_property
-    def lp_objective_vector(self):
+    def objective_vector(self):
         # CVXopt can only minimazise so the multiply the objective vector by -1
         # Float is required by CVXopt
-        return np.array([-1 * self.delta_degree[i] for i in self.order], dtype=float)
+        return np.array([-1 * self.swing.delta_degree[i] for i in self.swing.order], dtype=float)
 
     @lazy_property
-    def lp_opt_firing(self) -> Dict[Node,int]:
+    def optimal_firing(self) -> Dict[Node,int]:
         '''
-        Gao's algorithm, using Liner Programming formulation
+        Gao's algorithm, using Linear Programming formulation
         Compute the optimal firing of each node for the now balenced graph
         '''
 
         from cvxopt import matrix, solvers
         # We add the constrain that each objectif need to me postiif
-        A, b = map(matrix, (self.lp_constrain_matrix, self.lp_constrain_vector))
-        c = matrix(self.lp_objective_vector)
+        A, b, c = map(matrix, (self.constrain_matrix, self.constrain_vector, self.objective_vector))
 
         #Integer solution use GLPK and turn off verbose output
         solvers.options['glpk'] = {'msg_lev': 'GLP_MSG_OFF'}
@@ -191,105 +194,65 @@ class Swing(object):
 
         x, x_int = sol['x'], [int(round(i)) for i in sol['x']]
         assert all(i == f for i, f in zip(x_int, x)), 'Some none integer buffers where found'
-        return dict(zip(self.order, x_int))  # Assume ordered dict
+        return dict(zip(self.swing.order, x_int))  # Assume ordered dict
 
     @lazy_property
-    def opt_edge_buffer(self) -> Dict[Edge, int]:
+    def optimal_buffer(self) -> Dict[Edge, int]:
         '''
         Needed buffer to optimally balance the graph
         '''
-        f, w = self.lp_opt_firing, self.weigh
+        f, w = self.optimal_firing, self.swing.weigh
         d =  {(i, o): (f[o] - f[i]) - w for (i, o), w in w.items() if (f[o] - f[i]) != w}
         logging.info(f'Unconstrained: {len(d)} distinct buffers ({sum(d.values())} values in total) are needed to optimaly balence the graph')
         return d
 
-    # 
-    # |\/| o ._  |\/|  _.
-    # |  | | | | |  | (_| ><
-    #
-    # Miminize  max(u_n - u_1)
-    # Subject to
-    #       u_n - u_1 \geq 0
-    #       u_i unrestricted
-    def bb(self, x, edges_adjacency_matrix, fixed_weighs, max_b) -> int:
-        '''Black Box function who compute:.
-            f(x) = max(fixed_weighs-sum(edges_adjacency_matrix*x))  (1)     
-            Subject to:
-                sum(x) > max_b                                      (2)
-                fixed_weighs-sum(edges_adjacency_matrix*x) >= 0     (3)
-        '''
+class Apple():
 
-        dim = x.get_n()
-        buffers = [x.get_coord(i) for i in range(dim)]
-
-        delta = fixed_weighs - np.sum(edges_adjacency_matrix * buffers, axis=1)
-
-        x.set_bb_output(0, max(delta))           # (1)
-        x.set_bb_output(1, sum(buffers) - max_b)  # (2)
-
-        for i, v in enumerate(delta, 2):
-            x.set_bb_output(i, -v)               #(3) Minus sign: \ge 0 -> \le 0 
-
-        return 1
-
-    def constrained_edge_buffer(self, max_b: int, max_bb_eval: int = 100) -> Tuple[Dict[Edge, int], int]:
-        '''
-        Optimize min(max(cw-w)) where
-                cw,w are the sum of weighs of the critical path, and other paths respectively
-        under the constrain 
-                sum(b) < max_b where bs are the buffers used in the aforesaid paths
-        
-        max_b <=0, meens no restriction on the number of buffers
-
-        Return the dictionary of buffers needed for eatch edges and the max(cw-w) value.
-        '''
-        # Initialization
-        opt_edg_buf = self.opt_edge_buffer
-        if max_b <= 0:
-            return opt_edg_buf, 0
-
-        nc_path = self.non_critical_path
-        logging.info(f'Constrained: {len(opt_edg_buf)} edges to optimize')
-
-        # Edge adjacency matrix and  fixed weighs
-        e_adj = np.array( [[e in pairs for e in opt_edg_buf] for pairs in nc_path], dtype=int)
-        weighs = self.critical_weigh - np.array(list(nc_path.values()), dtype=int)
-
-        bb = partial(self.bb, max_b=max_b, edges_adjacency_matrix=e_adj, fixed_weighs=weighs)
-
-        # Nomad parameter 0 < buffer < optimal result
-        lb = [0] * len(opt_edg_buf)
-        ub = list(opt_edg_buf.values())
-
-        # For now, the starting point of the minmax optimation is set arbitrary to the lower bound (no buffer)
-        x0 = ub #lb
-
-        params = [
-            f'BB_OUTPUT_TYPE OBJ EB {" ".join(["EB"] * len(nc_path))}',  # Each path have a constrain
-            f'MAX_BB_EVAL {max_bb_eval}',
-            'LOWER_BOUND * 0',  # Buffer are postif
-            'BB_INPUT_TYPE * I',  # All integer
-            f'DISPLAY_DEGREE {0 if logging.getLogger().getEffectiveLevel() >= 30 else 1}'
-        ]
-
-        import PyNomad
-        logging.debug('Starting Nomad evaluation')
-        x_return, f_return, h_return, nb_evals, nb_iters, stopflag = PyNomad.optimize(bb, x0, lb, ub, params)
-
-        if nb_evals == max_bb_eval:
-            logging.warning(f'The number of maximun evalation ({max_bb_eval}) has been reached.'
-                             ' Maybe inscrease max_bb_eval threshold.')
-
-        # Map back to the name
-        l_buffer_updated = {k: int(v) for k, v in zip(opt_edg_buf, x_return) if v}
-        return l_buffer_updated, f_return
+    def __init__(self,s):
+        self.swing = s
+        self.W = s.weigh
+        self.edges = len(self.W)
 
     @lazy_property
-    def max_traffic(self) -> List[Edge]:
-        d = defaultdict(int)
-        for i in self.path_edges:
-            for o in i:
-                d[o] += 1
+    def constrain_matrix(self):
 
-        return dict(d)
+        CP = self.swing.critical_paths
+        P = self.swing.non_critical_paths
+        paths = len(P)
 
+        edges_in_cp = set(chain.from_iterable(CP))
+        matrix_path = np.matrix([ [int(e in p and e not in edges_in_cp) for e in self.W] for p in P])
+
+        o,z = (f(paths).reshape(-1,1) for f in (np.ones,  np.zeros ))
+
+        # Eta
+        e = np.concatenate((-o,-matrix_path),axis=1)
+        # Delta >=0
+        d = np.concatenate((z,matrix_path),axis= 1)
+        # positif constraint
+        A_pos = np.identity(self.edges+1) # Expant with positif contrains
+        return np.concatenate((e,d,-A_pos))
+
+    @lazy_property
+    def constrain_vector(self):
+        weight_path = np.array(list(self.swing.non_critical_paths.values()))
+        # Sum weight_path
+        b = -next(iter(self.swing.critical_paths.values())) + weight_path
+        # postof constraint
+        b_pos = np.zeros(self.edges+1)
+        return np.concatenate((b,-b,b_pos))
+
+    @lazy_property
+    def objective_vector(self):
+        return np.concatenate( ([1],np.zeros(self.edges)))    
+
+    @lazy_property
+    def optimal_buffer(self) -> Dict[Edge, int]:
+        from cvxopt import matrix, solvers
+        A, b, c = map(matrix, (self.constrain_matrix, self.constrain_vector, self.objective_vector))
+
+        #Integer solution use GLPK and turn off verbose output
+        #solvers.options['glpk'] = {'msg_lev': 'GLP_MSG_OFF'}
+        delta, *sol=solvers.lp(c,A,b, solver='glpk')['x']
+
+        return delta, {e:b for e,b in zip(self.W,sol) if b} 

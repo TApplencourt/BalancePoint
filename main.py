@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-from balence import Swing
-#import networkx as nx
-#import matplotlib.pyplot as plt
-#from networkx.drawing.nx_agraph import write_dot
+from balence import Swing, Apple, Gao
+
+import networkx as nx
+import matplotlib.pyplot as plt
+from networkx.drawing.nx_agraph import write_dot
 
 import random
 import logging
@@ -37,6 +38,8 @@ if __name__ == '__main__':
 
     # Weighted graph to balence
     #Gao fig 8
+
+    '''
     w = {
         ('u1', 'u2'): 1,
         ('u2', 'u4'): 3,
@@ -46,28 +49,39 @@ if __name__ == '__main__':
         ('u1', 'u5'): 20,
         ('u3', 'u5'): 5
     }
+    '''
 
     ##Appl fig 1
-    #w = {
-    #    ('u1', 'u2'): 1,
-    #    ('u1', 'u3'): 1,
-    #    ('u2', 'u6'): 90,
-    #    ('u2', 'u4'): 1,
-    #    ('u4', 'u6'): 80,
-    #    ('u6', 'u8'): 1,
-    #    ('u3', 'u7'): 20,
-    #    ('u3', 'u5'): 1,
-    #    ('u5', 'u7'): 1,
-    #    ('u7', 'u8'): 1
-    #}
+    w = {
+        ('u1', 'u2'): 1,
+        ('u1', 'u3'): 1,
+        ('u2', 'u6'): 90,
+        ('u2', 'u4'): 1,
+        ('u4', 'u6'): 80,
+        ('u6', 'u8'): 1,
+        ('u3', 'u7'): 20,
+        ('u3', 'u5'): 1,
+        ('u5', 'u7'): 1,
+        ('u7', 'u8'): 1
+    }
 
-    max_b, max_bb_eval, seed = 410-1, 100, 1
-    #w =generate_random_dag(200,0.001, seed)
+    #max_b, max_bb_eval, seed = 410-1, 14, 1
+    #w =generate_random_dag(30,0.1, seed)
 
     s = Swing(w) 
     
+    glp = Apple(s)
+    print (glp.optimal_buffer)
 
-    print(s.max_traffic)
+    glp = Gao(s)
+    print (glp.optimal_buffer)
+
+    #from collections import Counter
+    #w2 = Counter(w) + Counter(glp.opt_edge_buffer)
+   
+    #mm = MinMax(s,glp.opt_edge_buffer)
+    #print (mm.opt_edge_buffer(734,200))
+    #print(s.max_traffic)
     # operation
     #w[('u1','u2')] = 2
 
