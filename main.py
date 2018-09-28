@@ -2,6 +2,7 @@
 from BalencePoint.lp import Apple, Gao
 
 import logging
+import time
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -9,7 +10,6 @@ def generate_random_dag(n, p,seed=None, draw=False):
 
     import random
     import networkx as nx
-    from networkx.drawing.nx_agraph import write_dot
 
     random_graph = nx.fast_gnp_random_graph(n, p, directed=True, seed=seed)
     G = nx.DiGraph( [(u, v) for (u, v) in random_graph.edges() if u < v])
@@ -51,36 +51,16 @@ if __name__ == '__main__':
     }
     '''
 
-    ##Appl fig 1
-    w = {
-        ('u1', 'u2'): 1,
-        ('u1', 'u3'): 1,
-        ('u2', 'u6'): 90,
-        ('u2', 'u4'): 1,
-        ('u4', 'u6'): 80,
-        ('u6', 'u8'): 1,
-        ('u3', 'u7'): 20,
-        ('u3', 'u5'): 1,
-        ('u5', 'u7'): 1,
-        ('u7', 'u8'): 1
-    }
-
-    '''
+    #'''
     # 1489 edges
     # 903 nodes
     # 603 paths
-
     start = time.time()
     w =generate_random_dag(1250,0.001, seed=1)
     end = time.time()
     print (f"Gen graph: {end - start}")
-    '''
+    #'''
 
-    # Create object who parse the graph
-    #s = Swing(w) 
-
-    # Run the balencer
-    import time
 
     #mode = 'Gao' 
     mode = 'Apple'
@@ -88,13 +68,22 @@ if __name__ == '__main__':
     if mode == 'Gao':
         start = time.time()
         glp = Gao(w)
-        glp.optimal_buffer
+        d = glp.optimal_buffer
         end = time.time()
         print (f"Gao opt: {end - start}")
 
     elif mode == 'Apple':
         start = time.time()
         glp = Apple(w,budget = None)
-        glp.optimal_buffer
+        delta, d = glp.optimal_buffer
         end = time.time()
         print (f"Apple opt: {end - start}")
+
+    d_upd = {};
+    for k,v in w.items():
+        if k in d:
+            v+=d[k]
+        d_upd[k] = v
+
+    from BalencePoint.lp import Swing
+    print (f"Is balenced: {Swing(d_upd).is_balenced}")
