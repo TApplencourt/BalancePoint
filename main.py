@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from BalencePoint.swing import Swing
 from BalencePoint.lp import Apple, Gao
 
 import logging
@@ -65,26 +64,37 @@ if __name__ == '__main__':
         ('u5', 'u7'): 1,
         ('u7', 'u8'): 1
     }
-    seed = 1
-    import time
+
+    '''
+    # 1489 edges
+    # 903 nodes
+    # 603 paths
 
     start = time.time()
-    w =generate_random_dag(1250,0.001, seed)
+    w =generate_random_dag(1250,0.001, seed=1)
     end = time.time()
     print (f"Gen graph: {end - start}")
+    '''
 
+    # Create object who parse the graph
+    #s = Swing(w) 
 
+    # Run the balencer
+    import time
 
-    s = Swing(w) 
+    #mode = 'Gao' 
+    mode = 'Apple'
 
-    start = time.time()
-    glp = Gao(s)
-    glp.optimal_buffer
-    end = time.time()
-    print (f"Gao opt: {end - start}")
- 
-    start = time.time()
-    glp = Apple(s)
-    glp.optimal_buffer
-    end = time.time()
-    print (f"Apple opt: {end - start}")
+    if mode == 'Gao':
+        start = time.time()
+        glp = Gao(w)
+        glp.optimal_buffer
+        end = time.time()
+        print (f"Gao opt: {end - start}")
+
+    elif mode == 'Apple':
+        start = time.time()
+        glp = Apple(w,budget = None)
+        glp.optimal_buffer
+        end = time.time()
+        print (f"Apple opt: {end - start}")

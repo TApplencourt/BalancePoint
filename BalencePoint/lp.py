@@ -1,6 +1,8 @@
 import logging # Please change logging info for more information about nomad optimization
 from itertools import chain
 
+from BalencePoint.swing import Swing
+
 import numpy as np
 from cvxopt import matrix, solvers
 from . import lazy_property
@@ -17,8 +19,8 @@ class Gao():
            u_i >= 0
     """
 
-    def __init__(self,s):
-        self.swing = s
+    def __init__(self,w):
+        self.swing = Swing(w)
 
     @property
     def constrain_matrix(self):
@@ -73,7 +75,7 @@ class Gao():
         '''
         f, w = self.optimal_firing, self.swing.weigh
         d =  {(i, o): (f[o] - f[i]) - w for (i, o), w in w.items() if (f[o] - f[i]) != w}
-        logging.info(f'Unconstrained: {len(d)} distinct buffers ({sum(d.values())} values in total) are needed to optimaly balence the graph')
+        logging.info(f'{len(d)} distinct buffers ({sum(d.values())} values in total) are needed to optimaly balence the graph')
         return d
 
 
@@ -102,10 +104,11 @@ class Apple():
     end;
     """
 
-    def __init__(self,s):
-        self.swing = s
-        self.W = s.weigh
+    def __init__(self,w, budget=None):
+        self.swing = Swing(w)
+        self.W = self.swing.weigh
         self.edges = len(self.W)
+        self.budget = budget
 
     @property
     def constrain_matrix(self):
@@ -125,7 +128,14 @@ class Apple():
         d = np.concatenate((z,matrix_path),axis= 1)
         # positif constraint
         A_pos = np.identity(self.edges+1) # Expant with positif contrains
-        return np.concatenate((e,d,-A_pos))
+
+
+        A =  np.concatenate((e,d,-A_pos))
+        if not self.budget:
+            return A
+        else:
+            b  = np.concatenate( ([0],np.ones(self.edges))).reshape(-1,1)
+            return np.concatenate((e,d,-A_pos,b.T))
 
     @property
     def constrain_vector(self):
@@ -134,7 +144,12 @@ class Apple():
         b = -next(iter(self.swing.critical_paths.values())) + weight_path
         # postof constraint
         b_pos = np.zeros(self.edges+1)
-        return np.concatenate((b,-b,b_pos))
+        b = np.concatenate((b,-b,b_pos))
+
+        if not self.budget:
+            return b
+        else:
+            return np.concatenate( (b, [self.budget]) ) 
 
     @property
     def objective_vector(self):
@@ -148,4 +163,7 @@ class Apple():
         solvers.options['glpk'] = {'msg_lev': 'GLP_MSG_OFF'}
         delta, *sol=solvers.lp(c,A,b, solver='glpk')['x']
 
-        return delta, {e:int(round(b)) for e,b in zip(self.W,sol) if b}
+        d = {e:int(round(b)) for e,b in zip(self.W,sol) if b}
+        logging.info(f'{len(d)} distinct buffers ({sum(d.values())} values in total) are needed to optimaly balence the graph')
+
+        return delta, d
