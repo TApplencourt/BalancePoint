@@ -4,7 +4,8 @@ from itertools import chain
 from BalencePoint.swing import Swing
 
 import numpy as np
-from cvxopt import matrix, solvers
+from cvxopt import matrix, solvers, glpk
+
 from . import lazy_property
 
 class Gao():
@@ -159,11 +160,14 @@ class Apple():
     def optimal_buffer(self):
         A, b, c = map(matrix, (self.constrain_matrix, self.constrain_vector, self.objective_vector))
 
-        #Integer solution use GLPK and turn off verbose output
-        solvers.options['glpk'] = {'msg_lev': 'GLP_MSG_OFF'}
-        delta, *sol=solvers.lp(c,A,b, solver='glpk')['x']
+        # Use the low level interface that allow use to define some variables as Integer
+        options = {'msg_lev': 'GLP_MSG_OFF'}
+        I = set(range(1,self.edges+1)) if self.budget else set()
+        status, x = glpk.ilp(c,A,b, I = I,options=options)
+        assert (status == 'optimal')
+        delta, *sol = x
 
-        d = {e:int(round(b)) for e,b in zip(self.W,sol) if b}
+        d = {e:b for e,b in zip(self.W,map(int,sol)) if b}
         logging.info(f'{len(d)} distinct buffers ({sum(d.values())} values in total) are needed to optimaly balence the graph')
 
         return delta, d
