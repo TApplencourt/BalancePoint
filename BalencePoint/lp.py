@@ -1,14 +1,11 @@
-import logging # Please change logging info for more information about nomad optimization
+import logging 
 import time
+import numpy as np
 
 from itertools import chain
-
 from BalencePoint.swing import Swing
-
-import numpy as np
 from cvxopt import matrix, solvers, glpk
 from . import lazy_property
-import time
 
 class Gao():
 
@@ -164,7 +161,7 @@ class Apple():
     def objective_vector(self):
         return np.concatenate( ([1],np.zeros(self.edges)))
 
-    @property
+    @lazy_property
     def optimal_buffer(self):
         A, b, c = map(matrix, (self.constrain_matrix, self.constrain_vector, self.objective_vector))
 
