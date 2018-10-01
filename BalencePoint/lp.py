@@ -185,14 +185,15 @@ class Solver():
 
     def __init__(self, w, budget=None, method='Gao+Apple'):
         self.s = Swing(w)
+        assert (method in ('Gao','Apple','Gao+Apple')),f'Method {method} not alowed'
         self.method = method
         self.budget = budget
-        
+
     @property
     def optimal_buffer(self):
 
         l_edge = None
-        if self.budget is None or self.method in ['Gao','Gao+Apple']:
+        if self.budget is None and self.method in ['Gao','Gao+Apple']:
             start = time.time()
             glp = Gao(self.s)
             d = glp.optimal_buffer

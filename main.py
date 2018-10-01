@@ -61,13 +61,13 @@ if __name__ == '__main__':
     print (f"Gen graph: {end - start}")
     #'''
 
-    delta, d = Solver(w,budget=23210).optimal_buffer
+    delta, d = Solver(w,method='Gao+Apple').optimal_buffer
     print (f'Delta: {delta}')
-    d_upd = {};
+    w_balenced = {};
     for k,v in w.items():
         if k in d:
             v+=d[k]
-        d_upd[k] = v
+        w_balenced[k] = v
 
     print ('')
-    print (f"Is balenced: {Swing(d_upd).is_balenced}")
+    print (f"Is balenced: {Swing(w_balenced).is_balenced}")
