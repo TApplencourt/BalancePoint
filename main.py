@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from BalencePoint.lp import Apple, Gao
+from BalencePoint.lp import Swing, Solver
 
 import logging
 import time
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     }
     #'''
 
-    '''
+    #'''
     # 1489 edges
     # 903 nodes
     # 603 paths
@@ -59,31 +59,15 @@ if __name__ == '__main__':
     w =generate_random_dag(1250,0.001, seed=1)
     end = time.time()
     print (f"Gen graph: {end - start}")
-    '''
+    #'''
 
-
-    #mode = 'Gao' 
-    mode = 'Apple'
-
-    if mode == 'Gao':
-        start = time.time()
-        glp = Gao(w)
-        d = glp.optimal_buffer
-        end = time.time()
-        print (f"Gao opt: {end - start}")
-
-    elif mode == 'Apple':
-        start = time.time()
-        glp = Apple(w,budget = None)
-        delta, d = glp.optimal_buffer
-        end = time.time()
-        print (f"Apple opt: {end - start}")
-
+    delta, d = Solver(w,budget=23210).optimal_buffer
+    print (f'Delta: {delta}')
     d_upd = {};
     for k,v in w.items():
         if k in d:
             v+=d[k]
         d_upd[k] = v
 
-    from BalencePoint.lp import Swing
+    print ('')
     print (f"Is balenced: {Swing(d_upd).is_balenced}")

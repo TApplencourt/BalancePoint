@@ -1,12 +1,14 @@
 import logging # Please change logging info for more information about nomad optimization
+import time
+
 from itertools import chain
 
 from BalencePoint.swing import Swing
 
 import numpy as np
 from cvxopt import matrix, solvers, glpk
-
 from . import lazy_property
+import time
 
 class Gao():
 
@@ -20,8 +22,8 @@ class Gao():
            u_i >= 0
     """
 
-    def __init__(self,w):
-        self.swing = Swing(w)
+    def __init__(self,s):
+        self.swing = s
 
     @property
     def constrain_matrix(self):
@@ -105,9 +107,15 @@ class Apple():
     end;
     """
 
-    def __init__(self,w, budget=None):
-        self.swing = Swing(w)
-        self.W = self.swing.weigh
+    def __init__(self,s, budget=None, l_edge=None):
+        self.swing = s
+
+        w = self.swing.weigh
+        if l_edge is None:
+            self.W = w
+        else:
+            self.W = {e:w[e] for e in l_edge}
+
         self.edges = len(self.W)
         self.budget = budget
 
@@ -168,6 +176,39 @@ class Apple():
         delta, *sol = x
 
         d = {e:b for e,b in zip(self.W,map(int,sol)) if b}
-        logging.info(f'{len(d)} distinct buffers ({sum(d.values())} values in total) are needed to optimaly balence the graph')
+        logging.info(f'{len(d)} distinct buffers ({sum(d.values())} values in total) are needed to balence the graph')
 
         return delta, d
+
+
+class Solver():
+
+    def __init__(self, w, budget=None, method='Gao+Apple'):
+        self.s = Swing(w)
+        self.method = method
+        self.budget = budget
+        
+    @property
+    def optimal_buffer(self):
+
+        l_edge = None
+        if self.budget is None or self.method in ['Gao','Gao+Apple']:
+            start = time.time()
+            glp = Gao(self.s)
+            d = glp.optimal_buffer
+            end = time.time()
+            logging.info(f"Gao opt: {end - start} second")
+
+            if not self.budget or sum(d.values()) <= self.budget:
+                return 0, d
+            else:
+                l_edge = set(d.keys())
+
+        if self.method in ['Apple', 'Gao+Apple']:
+            start = time.time()
+            glp = Apple(self.s,self.budget, l_edge)
+            delta, d = glp.optimal_buffer
+            end = time.time()
+            logging.info(f"Apple opt: {end - start}")
+            return delta, d
+ 
