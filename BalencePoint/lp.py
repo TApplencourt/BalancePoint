@@ -64,8 +64,7 @@ class Gao():
         solvers.options['glpk'] = {'msg_lev': 'GLP_MSG_OFF'}
         sol = solvers.lp(c, A, b, solver='glpk')
 
-        x, x_int = sol['x'], [int(round(i)) for i in sol['x']]
-        assert all(i == f for i, f in zip(x_int, x)), 'Some none integer buffers where found'
+        x_int = map(int,sol['x'])
         return dict(zip(self.swing.order, x_int))  # Assume ordered dict
 
     @lazy_property
