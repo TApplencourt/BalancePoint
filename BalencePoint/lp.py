@@ -178,7 +178,7 @@ class Apple():
         d = {e:b for e,b in zip(self.W,map(int,sol)) if b}
         logging.info(f'{len(d)} distinct buffers ({sum(d.values())} values in total) are needed to balence the graph')
 
-        return delta, d
+        return int(delta), d
 
 
 class Solver():
@@ -197,7 +197,7 @@ class Solver():
             glp = Gao(self.s)
             d = glp.optimal_buffer
             end = time.time()
-            logging.info(f"Gao opt: {end - start} second")
+            logging.info(f"Gao opt: {end - start:.3f} seconds")
 
             if not self.budget or sum(d.values()) <= self.budget:
                 return 0, d
@@ -209,6 +209,6 @@ class Solver():
             glp = Apple(self.s,self.budget, l_edge)
             delta, d = glp.optimal_buffer
             end = time.time()
-            logging.info(f"Apple opt: {end - start}")
+            logging.info(f"Apple opt: {end - start:.3f} seconds")
             return delta, d
  
