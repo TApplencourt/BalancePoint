@@ -61,7 +61,7 @@ if __name__ == '__main__':
     print (f"Gen graph: {end - start}")
     #'''
 
-    delta, d = Solver(w,method='Gao+Apple').optimal_buffer
+    delta, d = Solver(w,method='Gao+Apple',budget=None).optimal_buffer
     print (f'Delta: {delta}')
     w_balenced = {};
     for k,v in w.items():
