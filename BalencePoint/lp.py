@@ -5,7 +5,7 @@ import numpy as np
 from itertools import chain
 from BalencePoint.swing import Swing
 from cvxopt import matrix, solvers, glpk
-from . import lazy_property
+from . import cached_property
 
 class Gao():
 
@@ -50,7 +50,7 @@ class Gao():
         # Float is required by CVXopt
         return np.array([-1 * self.swing.delta_degree[i] for i in self.swing.order], dtype=float)
 
-    @lazy_property
+    @cached_property
     def optimal_firing(self): 
         '''
         Gao's algorithm, using Linear Programming formulation
@@ -67,7 +67,7 @@ class Gao():
         x_int = map(int,sol['x'])
         return dict(zip(self.swing.order, x_int))  # Assume ordered dict
 
-    @lazy_property
+    @cached_property
     def optimal_buffer(self):
         '''
         Needed buffer to optimally balance the graph
@@ -159,7 +159,7 @@ class Apple():
     def objective_vector(self):
         return np.concatenate( ([1],np.zeros(self.edges)))
 
-    @lazy_property
+    @cached_property
     def optimal_buffer(self):
         A, b, c = map(matrix, (self.constrain_matrix, self.constrain_vector, self.objective_vector))
 
@@ -188,7 +188,7 @@ class Solver():
         self.method = method
         self.budget = budget
        
-    @lazy_property
+    @cached_property
     def optimal_buffer(self):
 
         l_edge = None
@@ -210,10 +210,9 @@ class Solver():
             logging.info(f"Apple opt: {end - start:.3f} seconds")
             return delta, d
 
-    @lazy_property
+    @cached_property
     def w_balenced(self):
         w_new = self.w.copy()
         for k,v in self.optimal_buffer[1].items():
             w_new[k] += v
         return w_new
-

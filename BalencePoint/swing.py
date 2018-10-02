@@ -3,7 +3,7 @@ import logging
 from collections import defaultdict
 from itertools import chain,tee
 from functools import lru_cache
-from . import lazy_property
+from . import cached_property
 
 # Python Typing
 from typing import List, Dict, Tuple, Set, NewType
@@ -25,14 +25,15 @@ class Swing(object):
         self.weigh = weigh  # Top-> bottom by default.
         logging.info(f'{len(weigh)} edges')
 
-    @lazy_property
+    @cached_property
     def adjacency_list_topdown(self) -> Dict[Node, List[Node]]:
         d = defaultdict(list)
+        print(f"in alt {id(self.weigh)}")
         for i, o in self.weigh:
             d[i].append(o)
         return dict(d)
 
-    @lazy_property
+    @cached_property
     def adjacency_list_bottomup(self) -> Dict[Node, List[Node]]:
         d = defaultdict(list)
         for k, lv in self.adjacency_list_topdown.items():
@@ -40,19 +41,19 @@ class Swing(object):
                 d[v].append(k)
         return dict(d)
 
-    @lazy_property
+    @cached_property
     def l_node(self) -> Set[Node]:
         ''' list of nodes'''
         n = self.adjacency_list_topdown.keys() | self.adjacency_list_bottomup.keys()
         logging.info(f'{len(n)} nodes')
         return n
 
-    @lazy_property
+    @cached_property
     def order(self) -> Dict[Node, int]:
         '''Arbitrary nodes labeling'''
         return {k: i for i, k in enumerate(self.l_node)}
 
-    @lazy_property
+    @cached_property
     def leaf(self) -> Node:
         '''
         Return the leaf node. 
@@ -64,7 +65,7 @@ class Swing(object):
         else:
             raise NotImplementedError("Multiple leafs found. Not implemted yet")
 
-    @lazy_property
+    @cached_property
     def delta_degree(self) -> Dict[Node, int]:
         '''indegree(i) - outdegree(i) for each node. '''
         in_ = self.adjacency_list_topdown
@@ -86,11 +87,11 @@ class Swing(object):
 
         return [k + [cur] for k in it]
 
-    @lazy_property
+    @cached_property
     def path_edges(self) -> List[Path]:
         return [ list(pairwise(p)) for p in self.path_node(self.leaf)]
 
-    @lazy_property
+    @cached_property
     def path(self) -> Dict[Tuple[Edge], Weigh]:
         '''
         Compute for all the path ( of the form (e1->e2),(e2->e3) )
@@ -105,26 +106,26 @@ class Swing(object):
         logging.info(f'{len(d)} paths')
         return d
 
-    @lazy_property
+    @cached_property
     def critical_paths(self) -> Dict[Tuple[Edge], Weigh]:
         c =  self.critical_weigh
         d = {p: w for p, w in self.path.items() if w == c}
         logging.info(f'{len(d)} critical paths')
         return d
 
-    @lazy_property
+    @cached_property
     def non_critical_paths(self) -> Dict[Tuple[Edge], Weigh]:
         c = self.critical_weigh
         d = {p: w for p, w in self.path.items() if w != c}
         logging.info(f'{len(d)} non critical paths')
         return d
 
-    @lazy_property
+    @cached_property
     def critical_weigh(self) -> Weigh:
         cw = max(self.path.values())
         logging.info(f'critical path weigh {cw}')
         return cw
 
-    @lazy_property
+    @cached_property
     def is_balenced(self):
         return len(self.critical_paths) == len(self.path)
