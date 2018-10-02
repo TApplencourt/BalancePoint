@@ -134,7 +134,6 @@ class Apple():
         # positif constraint
         A_pos = np.identity(self.edges+1) # Expant with positif contrains
 
-
         A =  np.concatenate((e,d,-A_pos))
         if not self.budget:
             return A
@@ -180,6 +179,7 @@ class Apple():
 class Solver():
 
     def __init__(self, w, budget=None, method='Gao+Apple'):
+        self.w = w
         self.s = Swing(w)
         if not method in ('Gao','Apple','Gao+Apple'):
             raise  NotImplementedError(f'Method {method} not alowed')
@@ -188,7 +188,7 @@ class Solver():
         self.method = method
         self.budget = budget
        
-    @property
+    @lazy_property
     def optimal_buffer(self):
 
         l_edge = None
@@ -211,4 +211,11 @@ class Solver():
             end = time.time()
             logging.info(f"Apple opt: {end - start:.3f} seconds")
             return delta, d
- 
+
+    @lazy_property
+    def w_balenced(self):
+        w_new = self.w.copy()
+        for k,v in self.optimal_buffer[1].items():
+            w_new[k] += v
+        return w_new
+

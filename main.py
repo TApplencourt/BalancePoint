@@ -51,7 +51,7 @@ if __name__ == '__main__':
     }
     #'''
 
-    #'''
+    '''
     # 1489 edges
     # 903 nodes
     # 603 paths
@@ -59,15 +59,9 @@ if __name__ == '__main__':
     w =generate_random_dag(1250,0.001, seed=1)
     end = time.time()
     print (f"Gen graph: {end - start}")
-    #'''
+    '''
 
-    delta, d = Solver(w,method='Gao+Apple',budget=None).optimal_buffer
-    print (f'Delta: {delta}')
-    w_balenced = {};
-    for k,v in w.items():
-        if k in d:
-            v+=d[k]
-        w_balenced[k] = v
+    w_balenced= Solver(w,method='Gao+Apple',budget=None).w_balenced
 
     print ('')
     print (f"Is balenced: {Swing(w_balenced).is_balenced}")
