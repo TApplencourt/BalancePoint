@@ -192,10 +192,9 @@ class Solver():
     def optimal_buffer(self):
 
         l_edge = None
-        if not self.method == 'Apple': 
+        if self.method in ['Gao','Gao+Apple']: 
             start = time.time()
-            glp = Gao(self.s)
-            d = glp.optimal_buffer
+            d = Gao(self.s).optimal_buffer
             end = time.time()
             logging.info(f"Gao opt: {end - start:.3f} seconds")
 
@@ -206,8 +205,7 @@ class Solver():
 
         if self.method in ['Apple', 'Gao+Apple']:
             start = time.time()
-            glp = Apple(self.s,self.budget, l_edge)
-            delta, d = glp.optimal_buffer
+            delta, d = Apple(self.s,self.budget, l_edge).optimal_buffer
             end = time.time()
             logging.info(f"Apple opt: {end - start:.3f} seconds")
             return delta, d
